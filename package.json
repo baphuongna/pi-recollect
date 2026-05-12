@@ -1,0 +1,54 @@
+{
+  "name": "pi-recollect",
+  "version": "0.1.1",
+  "description": "Persistent memory extension for Pi \u2014 semantic search, knowledge compounding, session continuity",
+  "author": "baphuongna",
+  "license": "MIT",
+  "type": "module",
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-coding-agent",
+    "memory",
+    "semantic-search",
+    "knowledge"
+  ],
+  "files": [
+    "*.ts",
+    "src/**/*.ts",
+    "skills/**/*",
+    "README.md",
+    "tsconfig.json",
+    "LICENSE"
+  ],
+  "scripts": {
+    "check": "npm run typecheck && npm test",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test --test-concurrency=1 --test-timeout=30000 test/unit/*.test.ts"
+  },
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ],
+    "skills": [
+      "./skills"
+    ]
+  },
+  "peerDependencies": {
+    "@mariozechner/pi-coding-agent": "*"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.7.0",
+    "typebox": "^1.1.24"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@mariozechner/pi-coding-agent": "^0.65.0",
+    "typescript": "^5.9.3"
+  },
+  "peerDependenciesMeta": {
+    "@mariozechner/pi-coding-agent": {
+      "optional": true
+    }
+  }
+}
