@@ -78,7 +78,7 @@ export const DEFAULT_CONFIG: PiMemoryConfig = {
 // ── Loader ─────────────────────────────────────────────────────────────────────
 
 export function loadConfig(cwd: string): PiMemoryConfig {
-	const configPath = path.join(cwd, ".pi", "pi-recall.json");
+	const configPath = path.join(cwd, ".pi", "pi-recollect.json");
 	try {
 		if (fs.existsSync(configPath)) {
 			const raw = fs.readFileSync(configPath, "utf-8");

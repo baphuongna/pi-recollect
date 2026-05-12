@@ -27,15 +27,15 @@ function createTestDB(): { db: Database.Database; dir: string; cleanup: () => vo
 	};
 }
 
-test("MemoryDB creates .pi-memory directory and opens database", () => {
+test("MemoryDB creates .pi-recall directory and opens database", () => {
 	const dir = createTempDir();
 	try {
 		const memDB = new MemoryDB(dir);
 		assert.ok(!memDB.isOpen);
 		const conn = memDB.open();
 		assert.ok(memDB.isOpen);
-		assert.ok(fs.existsSync(path.join(dir, ".pi-memory")));
-		assert.ok(fs.existsSync(path.join(dir, ".pi-memory", "memory.db")));
+		assert.ok(fs.existsSync(path.join(dir, ".pi-recall")));
+		assert.ok(fs.existsSync(path.join(dir, ".pi-recall", "memory.db")));
 		memDB.close();
 		assert.ok(!memDB.isOpen);
 	} finally {

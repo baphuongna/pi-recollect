@@ -111,10 +111,9 @@ export function registerPiMemory(pi: ExtensionAPI): void {
 			const sessionId = (currentCtx as unknown as Record<string, unknown>).sessionId as string | undefined;
 			if (sessionId) {
 				const conn = memoryDB.getConnection();
-				const compactionEntry = (event as { compactionEntry?: string }).compactionEntry ?? "";
+				const _compactionEntry = (event as unknown as { compactionEntry?: unknown }).compactionEntry;
 				// Recall relevant memories at compact detail level
-				const recalled = "[memories recalled at compaction — see memory_search]";
-				return { recalledMemories: recalled };
+				const _recalled = "[memories recalled at compaction — see memory_search]";
 			}
 		} catch { /* non-critical */ }
 	});
@@ -133,9 +132,9 @@ export function registerPiMemory(pi: ExtensionAPI): void {
 
 			for (const result of toolResults) {
 				if (result.isError) {
-					tracker.trackError(result.toolName ?? "unknown", "tool failed");
+					tracker.trackError(result.toolName ?? "unknown", "tool failed", 0);
 				} else if (result.toolName === "bash") {
-					tracker.trackCommand("(bash command)", 0);
+					tracker.trackCommandSuccess("(bash command)", "", 0);
 				}
 			}
 		} catch { /* non-critical */ }
@@ -161,7 +160,7 @@ export function registerPiMemory(pi: ExtensionAPI): void {
 			if (/\b(use\s+\w+|don't\s+do|prefer\s+\w+|instead\s+of|go\s+with|I'll\s+use)/i.test(text)) {
 				const sessionId = (currentCtx as unknown as Record<string, unknown>).sessionId as string | undefined;
 				const tracker = createSessionTracker(memoryDB.getConnection(), sessionId ?? "unknown");
-				tracker.trackDecision(text.slice(0, 200));
+				tracker.trackDecision(text.slice(0, 200), 0);
 			}
 		} catch { /* non-critical */ }
 	});

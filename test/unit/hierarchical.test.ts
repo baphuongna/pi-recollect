@@ -31,10 +31,10 @@ test("ensurePiMemoryDir creates directory structure", () => {
 	const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-recall-hier-"));
 	try {
 		const result = ensurePiMemoryDir(dir);
-		assert.ok(fs.existsSync(path.join(dir, ".pi-memory")));
-		assert.ok(fs.existsSync(path.join(dir, ".pi-memory", "mental-models")));
-		assert.ok(fs.existsSync(path.join(dir, ".pi-memory", "solutions")));
-		assert.equal(result, path.join(dir, ".pi-memory"));
+		assert.ok(fs.existsSync(path.join(dir, ".pi-recall")));
+		assert.ok(fs.existsSync(path.join(dir, ".pi-recall", "mental-models")));
+		assert.ok(fs.existsSync(path.join(dir, ".pi-recall", "solutions")));
+		assert.equal(result, path.join(dir, ".pi-recall"));
 	} finally {
 		fs.rmSync(dir, { recursive: true, force: true });
 	}
@@ -78,11 +78,11 @@ test("generatePIMemoryMd includes project name", () => {
 	}
 });
 
-test("updateMarkdownFile creates file in .pi-memory", () => {
+test("updateMarkdownFile creates file in .pi-recall", () => {
 	const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-recall-hier-"));
 	try {
 		updateMarkdownFile(dir, "gotchas", "# Gotchas\n\n- Test gotcha");
-		const content = fs.readFileSync(path.join(dir, ".pi-memory", "gotchas.md"), "utf-8");
+		const content = fs.readFileSync(path.join(dir, ".pi-recall", "gotchas.md"), "utf-8");
 		assert.ok(content.includes("Test gotcha"));
 	} finally {
 		fs.rmSync(dir, { recursive: true, force: true });
@@ -94,7 +94,7 @@ test("updateMarkdownFile overwrites existing content", () => {
 	try {
 		updateMarkdownFile(dir, "test", "Version 1");
 		updateMarkdownFile(dir, "test", "Version 2");
-		const content = fs.readFileSync(path.join(dir, ".pi-memory", "test.md"), "utf-8");
+		const content = fs.readFileSync(path.join(dir, ".pi-recall", "test.md"), "utf-8");
 		assert.equal(content, "Version 2");
 	} finally {
 		fs.rmSync(dir, { recursive: true, force: true });

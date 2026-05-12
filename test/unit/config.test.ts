@@ -9,7 +9,7 @@ function withTempConfig(configObj: Record<string, unknown>, fn: (dir: string) =>
 	const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-recall-config-"));
 	const piDir = path.join(dir, ".pi");
 	fs.mkdirSync(piDir, { recursive: true });
-	fs.writeFileSync(path.join(piDir, "pi-recall.json"), JSON.stringify(configObj));
+	fs.writeFileSync(path.join(piDir, "pi-recollect.json"), JSON.stringify(configObj));
 	try {
 		fn(dir);
 	} finally {
@@ -55,7 +55,7 @@ test("loadConfig handles malformed JSON gracefully", () => {
 	const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-recall-config-"));
 	const piDir = path.join(dir, ".pi");
 	fs.mkdirSync(piDir, { recursive: true });
-	fs.writeFileSync(path.join(piDir, "pi-recall.json"), "not valid json {{{");
+	fs.writeFileSync(path.join(piDir, "pi-recollect.json"), "not valid json {{{");
 	try {
 		const config = loadConfig(dir);
 		assert.deepEqual(config, DEFAULT_CONFIG);
@@ -68,7 +68,7 @@ test("loadConfig handles non-object JSON gracefully", () => {
 	const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-recall-config-"));
 	const piDir = path.join(dir, ".pi");
 	fs.mkdirSync(piDir, { recursive: true });
-	fs.writeFileSync(path.join(piDir, "pi-recall.json"), "42");
+	fs.writeFileSync(path.join(piDir, "pi-recollect.json"), "42");
 	try {
 		const config = loadConfig(dir);
 		assert.deepEqual(config, DEFAULT_CONFIG);
