@@ -1,7 +1,7 @@
 {
   "name": "pi-recollect",
-  "version": "0.1.1",
-  "description": "Persistent memory extension for Pi \u2014 semantic search, knowledge compounding, session continuity",
+  "version": "0.2.0",
+  "description": "Persistent memory extension for Pi — semantic search, knowledge compounding, session continuity",
   "author": "baphuongna",
   "license": "MIT",
   "type": "module",
