@@ -33,5 +33,10 @@
   },
   "devDependencies": {
     "tsx": "^4.19.0"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "tsx --test",
+    "typecheck": "tsc --noEmit"
   }
 }
