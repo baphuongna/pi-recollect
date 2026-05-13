@@ -8,64 +8,62 @@ pi install npm:pi-recollect
 
 ## Basic Usage
 
-### Remember Insight
+### 1. Store Memory
 
 ```bash
-/remember JWT tokens expire after 24h
+/memory store "Use auth middleware for all /api routes"
+
+Output:
+✅ Memory stored (id: mem-123)
+Tags: []
+Importance: normal
 ```
 
-### Recall Memories
+### 2. Search Memory
 
 ```bash
-/recall authentication patterns
+/memory search auth
+
+Output:
+## Memories (3 found)
+
+1. **Use auth middleware** (relevance: 0.95)
+   "Use auth middleware for all /api routes"
+   
+2. **JWT tokens** (relevance: 0.78)
+   "Store JWT in httpOnly cookie"
+   
+3. **Password hashing** (relevance: 0.65)
+   "Use bcrypt with cost 12"
 ```
 
-### Compact Context
+### 3. Recall Context
 
 ```bash
-/compact
+/memory recall
+
+Output:
+## Session Context
+
+Last session: 2 hours ago
+Project: my-app
+Last task: Implemented authentication
+
+Key memories:
+- Use auth middleware for /api routes
+- JWT tokens in httpOnly cookie
 ```
 
-## Graph Store
+### 4. List Memories
 
-```typescript
-import { createGraphStore } from 'pi-recollect';
+```bash
+/memory list
 
-const store = createGraphStore();
+Output:
+## All Memories (42)
 
-// Add insights
-const insight = store.addNode({
-  type: 'insight',
-  title: 'JWT best practices',
-  content: 'Use RS256 algorithm',
-});
-
-store.addRelation(insight.id, {
-  type: 'relates_to',
-  targetId: authInsight.id,
-});
-
-// Query
-const insights = store.query({ type: 'insight' });
+Recent:
+- mem-42: "API response format" (5 min ago)
+- mem-41: "Database schema changes" (1 hour ago)
+- mem-40: "Auth implementation" (2 hours ago)
 ```
-
-## Memory Decay
-
-```typescript
-import { createMemoryDecay } from 'pi-recollect';
-
-const decay = createMemoryDecay({
-  decayThreshold: 30 * 24 * 60 * 60 * 1000,
-});
-
-// Check if should decay
-if (decay.shouldDecay(node)) {
-  const summary = decay.summarize(node);
-  store.updateNode(node.id, { content: summary });
-}
-```
-
-## Next Steps
-
-- Read [API.md](API.md) for full API reference
-- Check [SPEC.md](../SPEC.md) for feature details

@@ -19,7 +19,7 @@ Persistent memory extension for Pi coding agents.
 pi install npm:pi-recollect
 ```
 
-## Usage
+## Quick Start
 
 ### Store Memory
 ```bash
@@ -43,10 +43,12 @@ pi install npm:pi-recollect
 
 ## Commands
 
-- `/memory` - Memory main command
-- `/memory store` - Store new memory
-- `/memory search` - Search memories
-- `/memory recall` - Recall context
+| Command | Description |
+|---------|-------------|
+| `/memory` | Memory main command |
+| `/memory store` | Store new memory |
+| `/memory search` | Search memories |
+| `/memory recall` | Recall context |
 
 ## Verify
 
