@@ -1,5 +1,5 @@
 {
-  "name": "pi-recollect",
+  "name": "@baphuongna/pi-recollect",
   "version": "0.3.0",
   "description": "Persistent memory extension for Pi — semantic search, knowledge compounding, session continuity",
   "type": "module",
@@ -12,11 +12,6 @@
       "types": "./dist/index.d.ts"
     }
   },
-  "scripts": {
-    "build": "tsc --noEmitOnError false",
-    "typecheck": "tsc --noEmit",
-    "test": "npx tsx --test --test-concurrency=1 --test-timeout=30000 test/unit/*.test.ts"
-  },
   "files": [
     "dist"
   ],
@@ -27,6 +22,7 @@
   ],
   "author": "BaphuongNA",
   "license": "MIT",
+  "repository": "https://github.com/baphuongna/pi-recollect",
   "pi": {
     "extensions": [
       "./index.ts"
