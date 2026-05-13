@@ -36,6 +36,7 @@
   "license": "MIT",
   "repository": "https://github.com/baphuongna/pi-recollect",
   "dependencies": {
+    "@sinclair/typebox": "^0.34.0",
     "better-sqlite3": "^12.10.0"
   },
   "peerDependencies": {
