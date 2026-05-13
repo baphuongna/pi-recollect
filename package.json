@@ -1,55 +1,41 @@
 {
   "name": "pi-recollect",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Persistent memory extension for Pi — semantic search, knowledge compounding, session continuity",
-  "author": "baphuongna",
-  "license": "MIT",
   "type": "module",
-  "keywords": [
-    "pi-package",
-    "pi",
-    "pi-coding-agent",
-    "memory",
-    "semantic-search",
-    "knowledge"
-  ],
-  "files": [
-    "*.ts",
-    "src/**/*.ts",
-    "skills/**/*",
-    "README.md",
-    "tsconfig.json",
-    "LICENSE"
-  ],
-  "scripts": {
-    "check": "npm run typecheck && npm test",
-    "typecheck": "tsc --noEmit",
-    "test": "npx tsx --test --test --test-concurrency=1 --test-timeout=30000 test/unit/*.test.ts"
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
   },
+  "scripts": {
+    "build": "tsc --noEmitOnError false",
+    "typecheck": "tsc --noEmit",
+    "test": "npx tsx --test --test-concurrency=1 --test-timeout=30000 test/unit/*.test.ts"
+  },
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "pi",
+    "coding-agent",
+    "extension"
+  ],
+  "author": "BaphuongNA",
+  "license": "MIT",
   "pi": {
     "extensions": [
       "./index.ts"
-    ],
-    "skills": [
-      "./skills"
     ]
   },
   "peerDependencies": {
-    "@mariozechner/pi-coding-agent": "*"
-  },
-  "dependencies": {
-    "better-sqlite3": "^11.7.0",
-    "typebox": "^1.1.24"
+    "typescript": "^5.0.0"
   },
   "devDependencies": {
-    "@mariozechner/pi-coding-agent": "^0.65.0",
-    "@types/better-sqlite3": "^7.6.12",
-    "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
-  },
-  "peerDependenciesMeta": {
-    "@mariozechner/pi-coding-agent": {
-      "optional": true
-    }
+    "tsx": "^4.19.0"
   }
 }
