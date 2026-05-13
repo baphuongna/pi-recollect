@@ -1,20 +1,32 @@
 {
   "name": "@baphuongna/pi-recollect",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Persistent memory extension for Pi — semantic search, knowledge compounding, session continuity",
   "type": "module",
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./index.ts",
+  "module": "./index.ts",
+  "types": "./index.ts",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "import": "./index.ts",
+      "types": "./index.ts"
     }
   },
   "files": [
-    "dist"
+    "*.ts",
+    "*.mjs",
+    "src/**/*.ts",
+    "skills/**/*",
+    "README.md",
+    "docs/",
+    "CHANGELOG.md",
+    "LICENSE"
   ],
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ]
+  },
   "keywords": [
     "pi",
     "coding-agent",
@@ -23,20 +35,10 @@
   "author": "BaphuongNA",
   "license": "MIT",
   "repository": "https://github.com/baphuongna/pi-recollect",
-  "pi": {
-    "extensions": [
-      "./index.ts"
-    ]
+  "dependencies": {
+    "better-sqlite3": "^12.10.0"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
-  },
-  "devDependencies": {
-    "tsx": "^4.19.0"
-  },
-  "scripts": {
-    "build": "tsc",
-    "test": "tsx --test",
-    "typecheck": "tsc --noEmit"
   }
 }

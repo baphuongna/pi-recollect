@@ -3,7 +3,7 @@
 ## Installation
 
 ```bash
-npm install pi-recollect
+pi install npm:pi-recollect
 ```
 
 ## Basic Usage
