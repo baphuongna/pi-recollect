@@ -1,6 +1,6 @@
 {
   "name": "pi-recollect",
-  "version": "0.4.1",
+  "version": "1.0.1",
   "description": "Persistent memory extension for Pi — semantic search, knowledge compounding, session continuity",
   "type": "module",
   "main": "./index.ts",
