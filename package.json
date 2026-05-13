@@ -1,6 +1,6 @@
 {
   "name": "pi-recollect",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Persistent memory extension for Pi — semantic search, knowledge compounding, session continuity",
   "type": "module",
   "main": "./index.ts",
@@ -40,6 +40,7 @@
     "better-sqlite3": "^12.10.0"
   },
   "peerDependencies": {
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "@earendil-works/pi-coding-agent": ">=0.73.0"
   }
 }
