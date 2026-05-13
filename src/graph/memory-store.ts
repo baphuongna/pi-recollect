@@ -1,10 +1,11 @@
 /**
  * Graph-based memory store with SQLite + FTS5
  * Based on beads and context-mode patterns
+ * Runtime-aware: supports both better-sqlite3 and bun:sqlite
  */
 
-import Database from 'better-sqlite3';
 import { generateHashId } from './hash-id.ts';
+import { loadDatabaseCtor, type DatabaseLike, type StatementLike } from '../db/runtime-aware-db.ts';
 
 export interface MemoryEntry {
   id: string;
@@ -30,10 +31,11 @@ export interface MemoryQuery {
 }
 
 export class GraphMemoryStore {
-  private db: Database.Database;
+  private db: DatabaseLike;
   private projectId: string;
 
   constructor(dbPath: string, projectId: string = 'default') {
+    const Database = loadDatabaseCtor();
     this.db = new Database(dbPath);
     this.projectId = projectId;
     this.initialize();
@@ -56,35 +58,40 @@ export class GraphMemoryStore {
       )
     `);
 
-    // FTS5 index for full-text search
-    this.db.exec(`
-      CREATE VIRTUAL TABLE IF NOT EXISTS memory_fts USING fts5(
-        key,
-        value,
-        content='memory',
-        content_rowid='rowid'
-      )
-    `);
+    // FTS5 index for full-text search (only with better-sqlite3)
+    try {
+      this.db.exec(`
+        CREATE VIRTUAL TABLE IF NOT EXISTS memory_fts USING fts5(
+          key,
+          value,
+          content='memory',
+          content_rowid='rowid'
+        )
+      `);
 
-    // Triggers to keep FTS in sync
-    this.db.exec(`
-      CREATE TRIGGER IF NOT EXISTS memory_ai AFTER INSERT ON memory BEGIN
-        INSERT INTO memory_fts(rowid, key, value) VALUES (NEW.rowid, NEW.key, NEW.value);
-      END
-    `);
+      // Triggers to keep FTS in sync
+      this.db.exec(`
+        CREATE TRIGGER IF NOT EXISTS memory_ai AFTER INSERT ON memory BEGIN
+          INSERT INTO memory_fts(rowid, key, value) VALUES (NEW.rowid, NEW.key, NEW.value);
+        END
+      `);
 
-    this.db.exec(`
-      CREATE TRIGGER IF NOT EXISTS memory_ad AFTER DELETE ON memory BEGIN
-        INSERT INTO memory_fts(memory_fts, rowid, key, value) VALUES('delete', OLD.rowid, OLD.key, OLD.value);
-      END
-    `);
+      this.db.exec(`
+        CREATE TRIGGER IF NOT EXISTS memory_ad AFTER DELETE ON memory BEGIN
+          INSERT INTO memory_fts(memory_fts, rowid, key, value) VALUES('delete', OLD.rowid, OLD.key, OLD.value);
+        END
+      `);
 
-    this.db.exec(`
-      CREATE TRIGGER IF NOT EXISTS memory_au AFTER UPDATE ON memory BEGIN
-        INSERT INTO memory_fts(memory_fts, rowid, key, value) VALUES('delete', OLD.rowid, OLD.key, OLD.value);
-        INSERT INTO memory_fts(rowid, key, value) VALUES (NEW.rowid, NEW.key, NEW.value);
-      END
-    `);
+      this.db.exec(`
+        CREATE TRIGGER IF NOT EXISTS memory_au AFTER UPDATE ON memory BEGIN
+          INSERT INTO memory_fts(memory_fts, rowid, key, value) VALUES('delete', OLD.rowid, OLD.key, OLD.value);
+          INSERT INTO memory_fts(rowid, key, value) VALUES (NEW.rowid, NEW.key, NEW.value);
+        END
+      `);
+    } catch {
+      // FTS5 may not be available in bun:sqlite
+      console.warn('FTS5 not available, falling back to LIKE search');
+    }
 
     // Relationships table for graph
     this.db.exec(`
@@ -150,22 +157,36 @@ export class GraphMemoryStore {
   }
 
   /**
-   * Query memories using FTS5 BM25 search
+   * Query memories using FTS5 BM25 search or LIKE fallback
    */
   query(q: MemoryQuery): MemoryEntry[] {
     const { query, type, status, project, limit = 10, offset = 0 } = q;
 
-    let sql = 'SELECT * FROM memory WHERE 1=1';
-    const params: (string | number)[] = [];
+    let sql: string;
+    let params: (string | number)[];
 
     if (query) {
-      sql = `
-        SELECT m.*, bm25(memory_fts) as rank
-        FROM memory m
-        JOIN memory_fts f ON m.rowid = f.rowid
-        WHERE memory_fts MATCH ?
-      `;
-      params.push(query);
+      // Try FTS5 first, fallback to LIKE
+      try {
+        sql = `
+          SELECT m.*, bm25(memory_fts) as rank
+          FROM memory m
+          JOIN memory_fts f ON m.rowid = f.rowid
+          WHERE memory_fts MATCH ?
+        `;
+        params = [query];
+      } catch {
+        // Fallback to LIKE search
+        sql = `
+          SELECT * FROM memory
+          WHERE (key LIKE ? OR value LIKE ?)
+        `;
+        const likeQuery = `%${query}%`;
+        params = [likeQuery, likeQuery];
+      }
+    } else {
+      sql = 'SELECT * FROM memory WHERE 1=1';
+      params = [];
     }
 
     if (type) {
@@ -192,7 +213,8 @@ export class GraphMemoryStore {
     sql += ' LIMIT ? OFFSET ?';
     params.push(limit, offset);
 
-    const rows = this.db.prepare(sql).all(...params) as any[];
+    const stmt = this.db.prepare(sql);
+    const rows = stmt.all(...params) as any[];
 
     return rows.map((row) => ({
       id: row.id,
@@ -240,7 +262,8 @@ export class GraphMemoryStore {
       params.push(type);
     }
 
-    const rows = this.db.prepare(sql).all(...params) as any[];
+    const stmt = this.db.prepare(sql);
+    const rows = stmt.all(...params) as any[];
 
     return rows.map((row) => ({
       id: row.id,
