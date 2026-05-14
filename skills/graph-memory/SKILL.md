@@ -1,6 +1,6 @@
 ---
 name: graph-memory
-description: Store and retrieve memories with semantic relationships and full-text search
+description: Store and retrieve memories with semantic relationships, full-text search, and automatic semantic decay
 triggers:
   - remember
   - recall
@@ -8,123 +8,133 @@ triggers:
   - graph
   - what do you know about
   - what have we done
+  - past decisions
+  - learned
 requirements:
-  tools: [read, write]
-  context: [current project context]
+  tools: [memory_search, memory_store, memory_recall, memory_status]
+  context: [project context]
 ---
 
 # Graph Memory Skill
 
 ## Objective
-Store and retrieve memories with semantic relationships, full-text search, and automatic semantic decay.
+Store and retrieve memories with semantic relationships, full-text search, and automatic semantic decay for maintaining context across sessions.
+
+## Tools Available
+- `memory_search` - Search persistent memory for relevant knowledge
+- `memory_store` - Store knowledge in persistent memory
+- `memory_recall` - Recall relevant memories with progressive disclosure
+- `memory_status` - Get memory status and statistics
 
 ## When to Use
 - When the user asks "remember this" or "what do you know about X"
 - When tracking decisions, observations, or patterns across sessions
 - When searching for previous work on a topic
+- When you need context from past sessions
 
-## Workflow
+## Tool Usage
 
-### Step 1: Determine Memory Type
-Classify the memory:
-- `observation` - Facts, findings, discovered information
-- `decision` - Architectural decisions, choices made
-- `summary` - Compacted/summarized entries
-- `task` - Work items or TODOs
-- `pattern` - Reusable patterns or solutions
-
-### Step 2: Store Memory
-```typescript
-// Using GraphMemoryStore
-const entry = await memory.remember(
-  key,        // Short descriptive key
-  value,      // Full content
-  type,       // Memory type
-  { tags }    // Optional tags
-);
-
-// Or use natural language
-await pi_recollect_remember({ key, value, type, tags });
+### memory_search
+```javascript
+memory_search({
+  query: "authentication implementation",
+  maxResults: 5,
+  scope: "all" | "solutions" | "decisions" | "gotchas" | "conventions",
+  detail: "compact" | "medium" | "full"
+})
 ```
 
-### Step 3: Add Relationships (Optional)
-```typescript
-// Link related memories
-await memory.relate(fromId, toId, 'depends_on');
-await memory.relate(fromId, toId, 'related_to');
+### memory_store
+```javascript
+memory_store({
+  category: "gotcha" | "convention" | "decision" | "pattern" | "architecture",
+  title: "JWT Authentication Pattern",
+  content: "Detailed explanation...",
+  metadata: {
+    files: ["src/auth/**"],
+    tags: ["auth", "jwt"],
+    severity: "high"
+  }
+})
 ```
 
-### Step 4: Query Memories
-```typescript
-// Natural language query
-const results = await pi_recollect_query({ 
-  query: "authentication implementation" 
-});
-
-// Structured query
-const results = await memory.query({
-  type: 'decision',
-  status: 'active',
-  limit: 10
-});
+### memory_recall
+```javascript
+memory_recall({
+  context: "working on authentication",
+  budget: 2048
+})
 ```
 
-## Output Format
-Return structured memory entries:
-```json
-{
-  "entries": [
-    {
-      "id": "bd-a1b2c3",
-      "key": "JWT authentication",
-      "value": "Implemented JWT tokens for API auth",
-      "type": "decision",
-      "status": "active",
-      "related": ["bd-d4e5f6"]
-    }
-  ],
-  "count": 1
-}
+### memory_status
+```javascript
+memory_status({
+  action: "status" | "stats" | "reindex" | "compact"
+})
 ```
+
+## Categories
+
+| Category | Description | Example |
+|----------|-------------|---------|
+| gotcha | Pitfalls and workarounds | "npm install fails on M1" |
+| convention | Coding standards | "Use camelCase for functions" |
+| decision | Architectural choices | "PostgreSQL over MongoDB" |
+| pattern | Reusable solutions | "Retry with exponential backoff" |
+| architecture | System design | "Microservices over monolith" |
+
+## Semantic Graph
+
+Memories can be linked:
+- `depends_on` - Dependency relationship
+- `related_to` - General relationship
+- `implements` - Implementation relationship
+- `supersedes` - Newer version of
 
 ## Examples
 
 ### Store a Decision
 ```
-User: "Let's use PostgreSQL for the main database"
-Agent: 
-  await memory.remember(
-    "Database choice",
-    "Decision: Use PostgreSQL for main database, Redis for cache",
-    "decision",
-    { tags: ["database", "infrastructure"] }
-  )
+User: Let's use PostgreSQL for the main database
+Agent:
+  memory_store({
+    category: "decision",
+    title: "Database choice: PostgreSQL",
+    content: "Decision: Use PostgreSQL for main database, Redis for cache",
+    metadata: { tags: ["database", "infrastructure"] }
+  })
 ```
 
-### Query for Context
+### Recall Past Context
 ```
-User: "What have we decided about authentication?"
+User: What were we working on last time?
 Agent:
-  const auth = await memory.query({ 
-    query: "authentication" 
-  });
-  // Returns all auth-related memories
+  memory_recall({
+    context: "current project"
+  })
 ```
 
-### Link Related Memories
+### Search for Solutions
 ```
-User: "This API endpoint depends on the auth module"
+User: How did we handle auth before?
 Agent:
-  const api = await memory.remember("GET /api/users", "...");
-  const auth = await memory.query({ query: "authentication" })[0];
-  await memory.relate(api.id, auth.id, 'depends_on');
+  memory_search({
+    query: "authentication",
+    scope: "decisions"
+  })
+```
+
+### Check Memory Health
+```
+Agent:
+  memory_status({ action: "stats" })
 ```
 
 ## Semantic Decay
 - Old closed entries (>7 days) are automatically summarized
 - Active entries are kept fresh
 - Compacted entries retain key insights
-- Run decay manually: `await decay.compact()`
+- Run decay: `memory_status({ action: "compact" })`
 
 ## Hash IDs
 - Format: `bd-a1b2c3` (conflict-free)
