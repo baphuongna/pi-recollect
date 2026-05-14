@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import type Database from "better-sqlite3";
+import { recordAudit } from "../store/audit-log.ts";
 
 export interface MemoryStatusInput {
 	action: "status" | "stats" | "reindex" | "compact" | "export";
@@ -71,6 +72,16 @@ export function handleMemoryStatus(db: Database.Database, dbPath: string, input:
 			].join("\n");
 		}
 		case "reindex": {
+			// Audit before wiping FTS5 tables
+			const reindexTargets = db.prepare(`SELECT id FROM chunks`).all() as Array<{ id: string }>;
+			recordAudit(
+				db,
+				"reindex",
+				"handleMemoryStatus (reindex)",
+				reindexTargets.map((r) => r.id),
+				{ count: reindexTargets.length },
+			);
+
 			// Delete and rebuild FTS5 indexes from sources
 			db.exec(`DELETE FROM chunks`);
 			db.exec(`DELETE FROM chunks_trigram`);
@@ -95,6 +106,9 @@ export function handleMemoryStatus(db: Database.Database, dbPath: string, input:
 			return `Reindexed ${sources.length} sources.`;
 		}
 		case "compact": {
+			// Audit VACUUM as a bulk structural operation
+			recordAudit(db, "compact", "handleMemoryStatus (compact)", [], {});
+
 			// VACUUM the database to reclaim space
 			db.exec(`VACUUM`);
 			const stats = getStats(db, dbPath);

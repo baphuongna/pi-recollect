@@ -110,4 +110,18 @@ export function initSchema(db: Database.Database): void {
 	db.exec(`CREATE INDEX IF NOT EXISTS idx_events_timestamp ON events(timestamp);`);
 	db.exec(`CREATE INDEX IF NOT EXISTS idx_solutions_problem ON solutions(problem_type);`);
 	db.exec(`CREATE INDEX IF NOT EXISTS idx_solutions_severity ON solutions(severity);`);
+
+	// Audit log: compliance trail for structural deletions and bulk operations
+	db.exec(`
+		CREATE TABLE IF NOT EXISTS audit_log (
+			id TEXT PRIMARY KEY,
+			timestamp TEXT NOT NULL,
+			operation TEXT NOT NULL,
+			function_id TEXT NOT NULL,
+			target_ids TEXT NOT NULL,
+			details TEXT NOT NULL
+		);
+	`);
+	db.exec(`CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON audit_log(timestamp);`);
+	db.exec(`CREATE INDEX IF NOT EXISTS idx_audit_operation ON audit_log(operation);`);
 }

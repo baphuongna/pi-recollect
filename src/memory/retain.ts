@@ -4,6 +4,7 @@ import * as path from "node:path";
 import type Database from "better-sqlite3";
 import { indexContent, removeFromIndex } from "../store/fts5-index.ts";
 import { ensurePiMemoryDir, updateMarkdownFile } from "./hierarchical.ts";
+import { recordAudit } from "../store/audit-log.ts";
 
 export interface StoreMemoryOpts {
 	category: "gotcha" | "convention" | "decision" | "pattern" | "architecture";
@@ -64,6 +65,7 @@ export function hasContentHash(db: Database.Database, content: string): boolean 
  * Remove a memory by source ID.
  */
 export function removeMemory(db: Database.Database, id: string): void {
+	recordAudit(db, "delete", "removeMemory", [id], {});
 	removeFromIndex(db, id);
 	db.prepare(`DELETE FROM sources WHERE id = ?`).run(id);
 }

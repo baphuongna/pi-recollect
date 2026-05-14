@@ -1,4 +1,5 @@
 import type Database from "better-sqlite3";
+import { recordAudit } from "./audit-log.ts";
 
 export interface SessionEvent {
 	id: number;
@@ -54,6 +55,14 @@ export function getEventsByType(db: Database.Database, sessionId: string, type: 
  */
 export function pruneOldEvents(db: Database.Database, maxAgeDays: number): number {
 	const cutoff = new Date(Date.now() - maxAgeDays * 24 * 60 * 60 * 1000).toISOString();
+	// Count affected rows for audit details before deleting
+	const affected = db.prepare(
+		`SELECT id FROM events WHERE timestamp < ?`,
+	).all(cutoff) as Array<{ id: number }>;
+	const targetIds = affected.map((r) => String(r.id));
+
+	recordAudit(db, "delete", "pruneOldEvents", targetIds, { count: targetIds.length, maxAgeDays });
+
 	const result = db.prepare(
 		`DELETE FROM events WHERE timestamp < ?`,
 	).run(cutoff);

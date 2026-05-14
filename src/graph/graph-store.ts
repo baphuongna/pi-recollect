@@ -17,6 +17,7 @@ export interface GraphNode {
   relations: Relation[];
   closed?: boolean;
   metadata?: Record<string, unknown>;
+  stale?: boolean;
 }
 
 export interface Relation {

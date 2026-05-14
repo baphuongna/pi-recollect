@@ -5,6 +5,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadConfig } from "../config.ts";
+import { withKeyedLock } from "../sync/keyed-mutex.ts";
 import { MemoryDB } from "../store/sqlite.ts";
 import { handleMemorySearch, type MemorySearchInput } from "../tools/memory-search.ts";
 import { handleMemoryStore, type MemoryStoreInput } from "../tools/memory-store.ts";
@@ -61,44 +62,46 @@ export function registerPiMemory(pi: ExtensionAPI): void {
 	});
 
 	// ── session_shutdown ───────────────────────────────────────────────────────
-	pi.on("session_shutdown", () => {
-		if (!currentCtx) return;
-		const config = loadConfig(currentCtx.cwd);
-		const db = memoryDB;
-		if (!db?.isOpen) {
-			memoryDB?.close();
+	pi.on("session_shutdown", async () => {
+		await withKeyedLock("session-shutdown", async () => {
+			if (!currentCtx) return;
+			const config = loadConfig(currentCtx.cwd);
+			const db = memoryDB;
+			if (!db?.isOpen) {
+				memoryDB?.close();
+				memoryDB = undefined;
+				currentCtx = undefined;
+				return;
+			}
+
+			const conn = db.getConnection();
+
+			// Knowledge compounding
+			if (config.autoCompound && config.compounding.enabled) {
+				try {
+					const sessionId = (currentCtx as unknown as Record<string, unknown>).sessionId as string | undefined;
+					if (sessionId) {
+						analyzeSession(conn, currentCtx.cwd, sessionId, config.compounding.dedupThreshold);
+					}
+				} catch { /* non-critical */ }
+			}
+
+			// Consolidation
+			try {
+				consolidateMemories(conn, config.maxSolutionsAge);
+			} catch { /* non-critical */ }
+
+			// Update PI_MEMORY.md
+			if (config.autoGenerateSummary) {
+				try {
+					generatePIMemoryMd(conn, currentCtx.cwd);
+				} catch { /* non-critical */ }
+			}
+
+			db.close();
 			memoryDB = undefined;
 			currentCtx = undefined;
-			return;
-		}
-
-		const conn = db.getConnection();
-
-		// Knowledge compounding
-		if (config.autoCompound && config.compounding.enabled) {
-			try {
-				const sessionId = (currentCtx as unknown as Record<string, unknown>).sessionId as string | undefined;
-				if (sessionId) {
-					analyzeSession(conn, currentCtx.cwd, sessionId, config.compounding.dedupThreshold);
-				}
-			} catch { /* non-critical */ }
-		}
-
-		// Consolidation
-		try {
-			consolidateMemories(conn, config.maxSolutionsAge);
-		} catch { /* non-critical */ }
-
-		// Update PI_MEMORY.md
-		if (config.autoGenerateSummary) {
-			try {
-				generatePIMemoryMd(conn, currentCtx.cwd);
-			} catch { /* non-critical */ }
-		}
-
-		db.close();
-		memoryDB = undefined;
-		currentCtx = undefined;
+		});
 	});
 
 	// ── session_compact → compaction-aware recall ────────────────────────────────
@@ -288,7 +291,8 @@ export function registerPiMemory(pi: ExtensionAPI): void {
 			const cwd = currentCtx?.cwd ?? process.cwd();
 			const db = getDB(cwd);
 			const { hybridSearch } = await import("../search/hybrid-search.js");
-			const { search as bm25Search } = await import("../store/search.js");
+			const searchModule = await import("../store/search.js");
+			const bm25Search = searchModule.search;
 
 			const conn = db.getConnection();
 			const p = params as Record<string, unknown>;
