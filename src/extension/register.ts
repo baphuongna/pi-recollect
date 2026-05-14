@@ -1,3 +1,4 @@
+import { startMemoryServer } from "../server/memory-server.ts";
 import type { ExtensionAPI, ExtensionContext, ToolDefinition } from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
 import * as fs from "node:fs";
@@ -270,7 +271,56 @@ export function registerPiMemory(pi: ExtensionAPI): void {
 		},
 	};
 
-	for (const tool of [memorySearchTool, memoryStoreTool, memoryRecallTool, memoryStatusTool]) {
+	// ── Hybrid search tool ─────────────────────────────────────────────────────
+	const hybridSearchTool: ToolDefinition = {
+		name: "memory_hybrid_search",
+		label: "Memory Hybrid Search",
+		description: "Search memory using hybrid BM25 + vector + graph RRF fusion for highest quality results",
+		parameters: Type.Object({
+			query: Type.String({ description: "Natural language query" }),
+			bm25Weight: Type.Optional(Type.Number({ description: "BM25 keyword weight (default: 1.0)" })),
+			vectorWeight: Type.Optional(Type.Number({ description: "Vector semantic weight (default: 1.0)" })),
+			graphWeight: Type.Optional(Type.Number({ description: "Graph traversal weight (default: 1.0)" })),
+			rrfK: Type.Optional(Type.Number({ description: "RRF constant k (default: 60)" })),
+			limit: Type.Optional(Type.Number({ description: "Max results (default: 10)" })),
+		}) as never,
+		async execute(_toolCallId, params, _signal, _onUpdate, _ctx) {
+			const cwd = currentCtx?.cwd ?? process.cwd();
+			const db = getDB(cwd);
+			const { hybridSearch } = await import("../search/hybrid-search.js");
+			const { search as bm25Search } = await import("../store/search.js");
+
+			const conn = db.getConnection();
+			const p = params as Record<string, unknown>;
+
+			const engine = {
+				bm25Search: (q: string, limit: number) => bm25Search(conn as never, q, { maxResults: limit }),
+				getAllEntries: () => conn.prepare("SELECT id, key, value FROM memory").all() as Array<{ id: string; key: string; value: string }>,
+				getRelated: (id: string, type?: string) => {
+					let sql = "SELECT m.id, m.key, m.value, r.type FROM relationships r JOIN memory m ON r.to_id = m.id WHERE r.from_id = ?";
+					const params: string[] = [id];
+					if (type) { sql += " AND r.type = ?"; params.push(type); }
+					return conn.prepare(sql).all(...params) as Array<{ id: string; key: string; value: string; type?: string }>;
+				},
+			};
+
+			const results = hybridSearch(engine, {
+				query: String(p.query ?? ""),
+				bm25Weight: Number(p.bm25Weight ?? 1.0),
+				vectorWeight: Number(p.vectorWeight ?? 1.0),
+				graphWeight: Number(p.graphWeight ?? 1.0),
+				rrfK: Number(p.rrfK ?? 60),
+				limit: Number(p.limit ?? 10),
+			});
+
+			const lines = results.map((r, i) =>
+				`[${i + 1}] ${r.title || r.id} (score: ${r.score.toFixed(3)})\n  BM25: ${r.scoreBreakdown.bm25Score.toFixed(3)} | Vec: ${r.scoreBreakdown.vectorScore.toFixed(3)} | Graph: ${r.scoreBreakdown.graphScore.toFixed(3)}\n  ${r.content.slice(0, 200)}${r.content.length > 200 ? "..." : ""}`
+			);
+			return toolResult(`Hybrid search results (${results.length}):\n\n${lines.join("\n\n")}`);
+		},
+	};
+
+	for (const tool of [memorySearchTool, memoryStoreTool, memoryRecallTool, memoryStatusTool, hybridSearchTool]) {
 		try {
 			pi.registerTool(tool);
 		} catch { /* tool registration may not be available */ }
