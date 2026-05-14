@@ -3,10 +3,13 @@
  * Install script - copies skills to project skills/ directory
  */
 
+import { createRequire } from "module";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 
+const require = createRequire(import.meta.url);
 const home = os.homedir();
 const agentDir = path.join(home, ".pi", "agent");
 const pkgName = path.basename(process.cwd());
@@ -15,10 +18,25 @@ const configPath = path.join(agentDir, `${pkgName}.json`);
 // Get the directory where this script is located (package root)
 const pkgRoot = path.dirname(fileURLToPath(import.meta.url));
 
+// Find project root (go up from node_modules)
+function findProjectRoot(pkgDir) {
+  // If we're in node_modules/<pkg>, go up to project root
+  const nodeModulesIndex = pkgDir.indexOf("/node_modules/");
+  if (nodeModulesIndex !== -1) {
+    return pkgDir.substring(0, nodeModulesIndex);
+  }
+  return pkgDir;
+}
+
+const projectRoot = findProjectRoot(pkgRoot);
+
 // Copy skills to project skills/ directory
 function copySkills() {
   const skillsSrc = path.join(pkgRoot, "skills");
-  const skillsDest = path.join(process.cwd(), "skills", pkgName);
+  const skillsDest = path.join(projectRoot, "skills", pkgName);
+  
+  console.log(`Copying skills from: ${skillsSrc}`);
+  console.log(`Copying skills to: ${skillsDest}`);
   
   // Create skills destination directory
   fs.mkdirSync(skillsDest, { recursive: true });
@@ -67,4 +85,4 @@ if (!fs.existsSync(configPath)) {
 copySkills();
 
 console.log(`\nInstall complete for ${pkgName}`);
-console.log(`Skills installed to: ${path.join(process.cwd(), "skills", pkgName)}`);
+console.log(`Skills installed to: ${path.join(projectRoot, "skills", pkgName)}`);
