@@ -6,6 +6,9 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { createRequire } from 'node:module';
+
+const _require = createRequire(import.meta.url);
 
 export interface SavedContext {
   id: string;
@@ -107,7 +110,7 @@ export class ContextSaver {
 
     try {
       // Get modified files from git
-      const { stdout } = await this.exec('git status --porcelain');
+      const { stdout } = await this.execGit(['status', '--porcelain']);
       const lines = stdout.split('\n').filter((l) => l.trim());
 
       for (const line of lines) {
@@ -248,12 +251,12 @@ export class ContextSaver {
   }
 
   /**
-   * Simple exec wrapper
+   * Run a git command using execFile (no shell interpolation).
    */
-  private exec(cmd: string): Promise<{ stdout: string; stderr: string }> {
+  private execGit(args: string[]): Promise<{ stdout: string; stderr: string }> {
     return new Promise((resolve) => {
-      const { exec } = require('node:child_process');
-      exec(cmd, { encoding: 'utf-8' }, (err: Error | null, stdout: string, stderr: string) => {
+      const { execFile } = _require('node:child_process');
+      execFile('git', args, { encoding: 'utf-8' }, (err: Error | null, stdout: string, stderr: string) => {
         resolve({ stdout: stdout || '', stderr: stderr || '' });
       });
     });

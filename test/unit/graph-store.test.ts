@@ -2,13 +2,13 @@
  * Graph Store Tests
  */
 
-import { describe, it } from 'node:test';
+import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert';
 
 import {
   createGraphStore,
   generateHashId,
-} from '../../src/graph/graph-store.js';
+} from '../../src/graph/graph-store.ts';
 
 describe('GraphStore', () => {
   let store: ReturnType<typeof createGraphStore>;

@@ -5,6 +5,7 @@
  * Dependency-aware graph for AI agents
  */
 
+import { randomUUID } from 'node:crypto';
 import { createHash } from "crypto";
 
 export interface GraphNode {
@@ -49,7 +50,7 @@ export interface GraphQuery {
  */
 export function generateHashId(prefix: string = "node"): string {
   const hash = createHash("sha256")
-    .update(`${Date.now()}-${Math.random()}`)
+    .update(randomUUID())
     .digest("hex")
     .substring(0, 8);
   return `${prefix}-${hash}`;

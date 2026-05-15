@@ -1,6 +1,6 @@
 import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert';
-import { createSessionIsolation } from '../../src/graph/session-isolation.js';
+import { createSessionIsolation } from '../../src/graph/session-isolation.ts';
 
 describe('Session Isolation', () => {
   // Mock store
@@ -29,15 +29,15 @@ describe('Session Isolation', () => {
   });
 
   it('stores memories in specific session', () => {
-    isolation.storeInSession('session-1', 'Test memory', 'insight');
+    isolation.storeInSessionSync('session-1', 'Test memory', 'insight');
     const memories = isolation.getSessionMemories('session-1');
     assert.strictEqual(memories.length, 1);
     assert.strictEqual(memories[0].content, 'Test memory');
   });
 
   it('isolates sessions', () => {
-    isolation.storeInSession('session-1', 'Memory 1');
-    isolation.storeInSession('session-2', 'Memory 2');
+    isolation.storeInSessionSync('session-1', 'Memory 1');
+    isolation.storeInSessionSync('session-2', 'Memory 2');
     
     const s1 = isolation.getSessionMemories('session-1');
     const s2 = isolation.getSessionMemories('session-2');
@@ -49,8 +49,8 @@ describe('Session Isolation', () => {
   });
 
   it('purges session memories', () => {
-    isolation.storeInSession('session-1', 'Memory 1');
-    isolation.storeInSession('session-1', 'Memory 2');
+    isolation.storeInSessionSync('session-1', 'Memory 1');
+    isolation.storeInSessionSync('session-1', 'Memory 2');
     
     const count = isolation.purgeSession('session-1');
     assert.strictEqual(count, 2);
@@ -58,7 +58,7 @@ describe('Session Isolation', () => {
   });
 
   it('clones memories between sessions', () => {
-    isolation.storeInSession('session-1', 'Clone me');
+    isolation.storeInSessionSync('session-1', 'Clone me');
     
     const count = isolation.cloneToSession('session-1', 'session-2');
     assert.strictEqual(count, 1);
@@ -66,8 +66,8 @@ describe('Session Isolation', () => {
   });
 
   it('tracks session statistics', () => {
-    isolation.storeInSession('session-1', 'Memory 1', 'failure');
-    isolation.storeInSession('session-1', 'Memory 2', 'insight');
+    isolation.storeInSessionSync('session-1', 'Memory 1', 'failure');
+    isolation.storeInSessionSync('session-1', 'Memory 2', 'insight');
     
     const stats = isolation.getSessionStats('session-1');
     assert.strictEqual(stats.count, 2);

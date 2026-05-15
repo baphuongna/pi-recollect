@@ -5,6 +5,7 @@
  * Uses AsyncLocalStorage for trace context propagation.
  */
 
+import { randomUUID } from 'node:crypto';
 import { AsyncLocalStorage } from 'async_hooks';
 
 export interface CorrelationContext {
@@ -39,7 +40,7 @@ export function newSpanId(runId: string, taskId = 'main'): string {
  * Generate a new trace ID
  */
 export function newTraceId(): string {
-  return `trace-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+  return `trace-${randomUUID()}`;
 }
 
 /**

@@ -1,5 +1,6 @@
 import { startMemoryServer } from "../server/memory-server.ts";
-import type { ExtensionAPI, ExtensionContext, ToolDefinition } from "@mariozechner/pi-coding-agent";
+import { handleCompaction } from "../continuity/compaction-hook.ts";
+import type { ExtensionAPI, ExtensionContext, ToolDefinition } from "@earendil-works/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -20,6 +21,7 @@ import { buildResumeContext, formatResumeContext } from "../continuity/resumer.t
 
 let currentCtx: ExtensionContext | undefined;
 let memoryDB: MemoryDB | undefined;
+let lastCompactionRecall: string | undefined;
 
 function getDB(cwd: string): MemoryDB {
 	if (memoryDB && memoryDB.cwd === cwd) return memoryDB;
@@ -115,9 +117,19 @@ export function registerPiMemory(pi: ExtensionAPI): void {
 			const sessionId = (currentCtx as unknown as Record<string, unknown>).sessionId as string | undefined;
 			if (sessionId) {
 				const conn = memoryDB.getConnection();
-				const _compactionEntry = (event as unknown as { compactionEntry?: unknown }).compactionEntry;
-				// Recall relevant memories at compact detail level
-				const _recalled = "[memories recalled at compaction — see memory_search]";
+				const compactionEntry = (event as unknown as { compactionEntry?: { taskDescription?: string } }).compactionEntry;
+				// Recall relevant memories at compact detail level using proper handler
+				const recalled = handleCompaction(
+					conn,
+					sessionId,
+					{ taskDescription: compactionEntry?.taskDescription ?? "" },
+					1024, // 1KB budget for compaction recall
+				);
+				// Store recalled memories for potential re-injection after compaction
+				if (recalled) {
+					// Store in a module-level variable accessible after compaction
+					lastCompactionRecall = recalled;
+				}
 			}
 		} catch { /* non-critical */ }
 	});

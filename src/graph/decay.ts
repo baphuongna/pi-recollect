@@ -3,7 +3,7 @@
  * Based on beads pattern: summarize old entries, keep active ones
  */
 
-import { GraphMemoryStore, MemoryEntry } from './memory-store';
+import { GraphMemoryStore, MemoryEntry } from './memory-store.js';
 
 export interface DecayConfig {
   /** Age in ms before entry is eligible for decay (default: 7 days) */

@@ -5,7 +5,16 @@
  * don't contaminate another session's context.
  */
 
-import type { MemoryCategory, GraphNode } from '../types.js';
+// Types aligned with memory-store.ts
+type MemoryCategory = 'observation' | 'summary' | 'decision' | 'pattern' | 'task';
+
+interface GraphNode {
+  id: string;
+  content: string;
+  category?: MemoryCategory;
+  timestamp: number;
+  metadata?: Record<string, unknown>;
+}
 
 export interface SessionAwareMemory {
   sessionId: string;
@@ -25,6 +34,7 @@ export interface SessionIsolationOptions {
 
 /**
  * Creates session isolation layer for memory operations
+ * Uses a mutex per session to prevent TOCTOU race conditions in capacity enforcement.
  */
 export function createSessionIsolation(
   store: {
@@ -39,18 +49,33 @@ export function createSessionIsolation(
   
   // Session-scoped memory cache
   const sessionCache = new Map<string, SessionAwareMemory[]>();
-  
+  // Mutex locks per session to prevent concurrent capacity check + add race
+  const sessionLocks = new Map<string, { promise: Promise<void>; release: () => void }>();
+
+  function acquireLock(sessionId: string): { promise: Promise<void>; release: () => void } {
+    // Wait for any existing lock to release
+    const existing = sessionLocks.get(sessionId);
+    const waitForExisting = existing ? existing.promise : Promise.resolve();
+    
+    let releaseFn: () => void;
+    const promise = new Promise<void>(resolve => {
+      releaseFn = resolve;
+    });
+    
+    const lock = { promise: waitForExisting.then(() => promise), release: releaseFn! };
+    sessionLocks.set(sessionId, lock);
+    return lock;
+  }
+
   return {
     /**
      * Get all memories for a specific session
      */
     getSessionMemories(sessionId: string): SessionAwareMemory[] {
-      // Check cache first
       if (sessionCache.has(sessionId)) {
         return sessionCache.get(sessionId)!;
       }
       
-      // Load from store
       const nodes = store.getNodes();
       const sessionMemories: SessionAwareMemory[] = [];
       
@@ -73,6 +98,7 @@ export function createSessionIsolation(
     
     /**
      * Store a memory in a specific session
+     * Uses mutex lock to prevent TOCTOU race between capacity check and add.
      */
     storeInSession(
       sessionId: string,
@@ -80,30 +106,75 @@ export function createSessionIsolation(
       category?: MemoryCategory,
       metadata: Record<string, unknown> = {}
     ): GraphNode {
-      // Check capacity
-      const current = this.getSessionMemories(sessionId);
-      if (current.length >= maxMemoriesPerSession) {
-        // Remove oldest
-        const oldest = current.sort((a, b) => a.created - b.created)[0];
-        store.deleteNode(oldest.nodeId);
-        sessionCache.delete(sessionId);
-      }
+      const lock = acquireLock(sessionId);
       
-      // Add new memory
-      const node = store.addNode({
-        content,
-        category,
-        metadata: {
-          ...metadata,
-          sessionId,
-          lastAccessed: Date.now()
+      return lock.promise.then(() => {
+        try {
+          const current = this.getSessionMemories(sessionId);
+          if (current.length >= maxMemoriesPerSession) {
+            const oldest = current.sort((a, b) => a.created - b.created)[0];
+            store.deleteNode(oldest.nodeId);
+            sessionCache.delete(sessionId);
+          }
+          
+          const node = store.addNode({
+            content,
+            category,
+            metadata: {
+              ...metadata,
+              sessionId,
+              lastAccessed: Date.now()
+            }
+          });
+          
+          sessionCache.delete(sessionId);
+          return node;
+        } finally {
+          lock.release();
+          // Clean up lock if this was the last one
+          const currentLock = sessionLocks.get(sessionId);
+          if (currentLock?.promise === lock.promise) {
+            sessionLocks.delete(sessionId);
+          }
         }
-      });
+      }) as unknown as GraphNode;
+    },
+    
+    /**
+     * Store a memory in a specific session (sync version with lock)
+     */
+    storeInSessionSync(
+      sessionId: string,
+      content: string,
+      category?: MemoryCategory,
+      metadata: Record<string, unknown> = {}
+    ): GraphNode {
+      const lock = acquireLock(sessionId);
       
-      // Invalidate cache
-      sessionCache.delete(sessionId);
-      
-      return node;
+      try {
+        const current = this.getSessionMemories(sessionId);
+        if (current.length >= maxMemoriesPerSession) {
+          const oldest = current.sort((a, b) => a.created - b.created)[0];
+          store.deleteNode(oldest.nodeId);
+          sessionCache.delete(sessionId);
+        }
+        
+        const node = store.addNode({
+          content,
+          category,
+          metadata: {
+            ...metadata,
+            sessionId,
+            lastAccessed: Date.now()
+          }
+        });
+        
+        sessionCache.delete(sessionId);
+        return node;
+      } finally {
+        lock.release();
+        sessionLocks.delete(sessionId);
+      }
     },
     
     /**
@@ -130,7 +201,7 @@ export function createSessionIsolation(
       let count = 0;
       
       for (const memory of memories) {
-        this.storeInSession(toSession, memory.content, memory.category);
+        this.storeInSessionSync(toSession, memory.content, memory.category);
         count++;
       }
       

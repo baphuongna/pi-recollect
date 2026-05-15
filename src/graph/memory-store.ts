@@ -299,9 +299,9 @@ export class GraphMemoryStore {
   }
 
   /**
-   * Close database
+   * Close database connection
    */
-  close(): void {
+  closeDb(): void {
     this.db.close();
   }
 }

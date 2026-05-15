@@ -34,6 +34,13 @@ const projectRoot = findProjectRoot(pkgRoot);
 function copySkills() {
   const skillsSrc = path.join(pkgRoot, "skills");
   const skillsDest = path.join(projectRoot, "skills", pkgName);
+
+  // Ensure destination is contained within projectRoot to prevent path traversal
+  const relativeDest = path.relative(projectRoot, skillsDest);
+  if (relativeDest.startsWith('..') || path.isAbsolute(relativeDest)) {
+    console.error(`ERROR: Refusing to copy skills outside project root: ${skillsDest}`);
+    return;
+  }
   
   console.log(`Copying skills from: ${skillsSrc}`);
   console.log(`Copying skills to: ${skillsDest}`);

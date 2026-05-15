@@ -13,6 +13,7 @@ import type { MemoryEntry } from "../graph/memory-store.js";
 
 export interface MemoryServerConfig {
   port?: number;
+  /** Default: 127.0.0.1 (localhost) for security */
   host?: string;
   /** Run in MCP proxy mode (JSON-RPC over HTTP) */
   mcpMode?: boolean;
@@ -20,6 +21,8 @@ export interface MemoryServerConfig {
   corsOrigins?: string[];
   /** Working directory for database */
   cwd?: string;
+  /** Authentication token - if set, all requests must include Bearer token */
+  authToken?: string;
 }
 
 interface JsonRequest {
@@ -166,10 +169,14 @@ async function handleRecall(req: IncomingMessage, res: ServerResponse, parsed: J
     const q = parsed.params?.q ?? (parsed.body as Record<string, unknown>)?.query as string ?? "";
     const limit = (parsed.body as Record<string, unknown>)?.limit as number ?? parsed.params?.limit ? parseInt(parsed.params!.limit!) : 10;
 
+    // Escape SQL LIKE wildcards to prevent injection
+    const escapedQ = q.replace(/[%_\\]/g, "\\$&");
+    const likePattern = `%${escapedQ}%`;
+
     const conn = ctx.db.getConnection();
     const rows = conn
-      .prepare("SELECT * FROM memory WHERE key LIKE ? OR value LIKE ? LIMIT ?")
-      .all(`%${q}%`, `%${q}%`, limit) as Array<{
+      .prepare("SELECT * FROM memory WHERE key LIKE ? ESCAPE '\\' OR value LIKE ? ESCAPE '\\' LIMIT ?")
+      .all(likePattern, likePattern, limit) as Array<{
         id: string; key: string; value: string; type: string;
         created_at: number; updated_at: number; status: string; project: string; tags: string;
       }>;
@@ -296,6 +303,16 @@ export class MemoryServerInstance {
         res.writeHead(204); res.end(); return;
       }
 
+      // Auth validation if token is configured
+      if (this.config.authToken) {
+        const authHeader = req.headers.authorization;
+        const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+        if (token !== this.config.authToken) {
+          json(res, 401, { error: "Unauthorized", message: "Valid auth token required" });
+          return;
+        }
+      }
+
       const url = new URL(req.url ?? "/", `http://localhost:${config.port ?? 3111}`);
       const path = url.pathname;
 
@@ -345,14 +362,16 @@ export class MemoryServerInstance {
           const { GraphMemoryStore } = require("../graph/memory-store.js");
           store = new GraphMemoryStore(this.db.dbPath);
         }
-        return store.getRelated(id, type);
+        return store!.getRelated(id, type);
       };
     })(),
   };
 
   listen(port?: number, host?: string): Promise<void> {
+    // Default to localhost (127.0.0.1) for security instead of 0.0.0.0
+    const listenHost = host ?? this.config.host ?? "127.0.0.1";
     return new Promise((resolve) => {
-      this._server.listen(port ?? this.config.port ?? 3111, host ?? this.config.host ?? "0.0.0.0", () => resolve());
+      this._server.listen(port ?? this.config.port ?? 3111, listenHost, () => resolve());
     });
   }
 
@@ -371,6 +390,7 @@ export async function startMemoryServer(
   config: MemoryServerConfig = {}
 ): Promise<MemoryServerInstance> {
   const server = new MemoryServerInstance(cwd, config);
-  await server.listen(config.port ?? 3111, config.host ?? "0.0.0.0");
+  // Default to localhost for security
+  await server.listen(config.port ?? 3111, config.host ?? "127.0.0.1");
   return server;
 }
