@@ -31,7 +31,7 @@ function getDB(cwd: string): MemoryDB {
 	return memoryDB;
 }
 
-export function registerPiMemory(pi: ExtensionAPI): void {
+export function registerPiRecollect(pi: ExtensionAPI): void {
 	// ── session_start ─────────────────────────────────────────────────────────
 	pi.on("session_start", (_event, ctx) => {
 		currentCtx = ctx;
@@ -342,3 +342,9 @@ export function registerPiMemory(pi: ExtensionAPI): void {
 		} catch { /* tool registration may not be available */ }
 	}
 }
+
+/**
+ * @deprecated Use `registerPiRecollect` instead. This alias preserves
+ * backwards compatibility with the legacy `pi-recall` / memory-prefixed name.
+ */
+export const registerPiMemory = registerPiRecollect;
