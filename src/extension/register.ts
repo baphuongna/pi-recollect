@@ -250,7 +250,24 @@ export function registerPiMemory(pi: ExtensionAPI): void {
 		async execute(_toolCallId, params, _signal, _onUpdate, _ctx) {
 			const cwd = currentCtx?.cwd ?? process.cwd();
 			const db = getDB(cwd);
+
+			// Show progress
+			await visual_update_progress({
+				total: 1,
+				completed: 0,
+				currentTask: "Storing memory...",
+				phase: "memory",
+			});
+
 			const text = handleMemoryStore(db.getConnection(), cwd, params as unknown as MemoryStoreInput);
+
+			await visual_update_progress({
+				total: 1,
+				completed: 1,
+				currentTask: "Memory stored",
+				phase: "memory",
+			});
+
 			return toolResult(text);
 		},
 	};
