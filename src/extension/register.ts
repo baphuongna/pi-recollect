@@ -1,6 +1,7 @@
 import { startMemoryServer } from "../server/memory-server.ts";
 import { handleCompaction } from "../continuity/compaction-hook.ts";
 import type { ExtensionAPI, ExtensionContext, ToolDefinition } from "@earendil-works/pi-coding-agent";
+import { visual_update_progress } from "@earendil-works/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
 import * as fs from "node:fs";
 import * as path from "node:path";
