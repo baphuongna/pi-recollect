@@ -1,6 +1,7 @@
 import { startMemoryServer } from "../server/memory-server.ts";
 import { handleCompaction } from "../continuity/compaction-hook.ts";
 import type { ExtensionAPI, ExtensionContext, ToolDefinition } from "@earendil-works/pi-coding-agent";
+import { visual_update_progress } from "@earendil-works/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -249,7 +250,28 @@ export function registerPiRecollect(pi: ExtensionAPI): void {
 		async execute(_toolCallId, params, _signal, _onUpdate, _ctx) {
 			const cwd = currentCtx?.cwd ?? process.cwd();
 			const db = getDB(cwd);
+
+			// Show progress
+			try {
+				await visual_update_progress({
+					total: 1,
+					completed: 0,
+					currentTask: "Storing memory...",
+					phase: "memory",
+				});
+			} catch { /* ignore visual errors */ }
+
 			const text = handleMemoryStore(db.getConnection(), cwd, params as unknown as MemoryStoreInput);
+
+			try {
+				await visual_update_progress({
+					total: 1,
+					completed: 1,
+					currentTask: "Memory stored",
+					phase: "memory",
+				});
+			} catch { /* ignore visual errors */ }
+
 			return toolResult(text);
 		},
 	};
